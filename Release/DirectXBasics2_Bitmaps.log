@@ -1,0 +1,14 @@
+﻿Build started 2016-01-27 12:13:32 PM.
+     1>Project "C:\Users\Brian\Dropbox\CST_Term_4\COMP4995 - Gaming\DirectXBasics2_Bitmaps\DirectXBasics2_Bitmaps.vcxproj" on node 2 (Build target(s)).
+     1>ClCompile:
+         C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin\CL.exe /c /Zi /nologo /W3 /WX- /O2 /Ob1 /Oy- /D WIN32 /D NDEBUG /D _WINDOWS /D _VC80_UPGRADE=0x0600 /D _MBCS /GF /Gm- /EHsc /MT /GS /Gy /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo".\Release/" /Fd".\Release/vc140.pdb" /Gd /TP /analyze- /errorReport:prompt Assn1.cpp main.cpp
+         Assn1.cpp
+     1>c:\users\brian\dropbox\cst_term_4\comp4995 - gaming\directxbasics2_bitmaps\basics.h(6): fatal error C1083: Cannot open include file: 'd3dx9tex.h': No such file or directory
+         main.cpp
+     1>c:\users\brian\dropbox\cst_term_4\comp4995 - gaming\directxbasics2_bitmaps\basics.h(6): fatal error C1083: Cannot open include file: 'd3dx9tex.h': No such file or directory
+         Generating Code...
+     1>Done Building Project "C:\Users\Brian\Dropbox\CST_Term_4\COMP4995 - Gaming\DirectXBasics2_Bitmaps\DirectXBasics2_Bitmaps.vcxproj" (Build target(s)) -- FAILED.
+
+Build FAILED.
+
+Time Elapsed 00:00:01.02
