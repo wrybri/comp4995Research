@@ -357,6 +357,7 @@ HRESULT Assn1::InitGeometry()
 	}
 	*/
 
+	/*
 	// Land tiles
 	int chairsPerSide = 100;
 	int chairSpacing = 5;
@@ -364,6 +365,16 @@ HRESULT Assn1::InitGeometry()
 		for (int j = 0; j < chairsPerSide; ++j) {
 				createObject((rand() % 50 ) / 10.0, &meshes[0], -(chairsPerSide - 1) * chairSpacing / 2.0 + chairSpacing * i, 0, -(chairsPerSide - 1) * chairSpacing / 2.0 + chairSpacing * j);
 		}
+	}
+	*/
+
+	// Setup sectors and map
+	for (int i = 0; i < MAX_SECTORS; ++i) {
+		sectorList[i] = createSector();
+	}
+
+	for (int i = 0; i < MAP_SIZE * MAP_SIZE; ++i) {
+		map[i] = sectorList[rand() % MAX_SECTORS];
 	}
 
 
@@ -520,6 +531,57 @@ void Assn1::createObject(float scaleFactor, bri::MeshObj* meshType, float x, flo
 
 	++objIndex;
 }
+
+
+bri::Obj3d* Assn1::createLandSquare(int landType, double height) {
+	bri::Obj3d *newObj = (bri::Obj3d*)malloc(sizeof(bri::Obj3d));
+	D3DXMatrixScaling(&newObj->matScaling, 1, height, 1);
+	D3DXMATRIX pushUp;
+	D3DXMatrixTranslation(&pushUp, 0, 2.5, 0);
+	newObj->matScaling = pushUp * newObj->matScaling;
+	newObj->type = landType;
+
+	// D3DXMatrixTranslation(&newObj.matTrans, x, y, z);
+	newObj->matNet = newObj->matScaling; //  *newObj.matTrans;
+
+	D3DXMatrixIdentity(&newObj->matRot);
+
+	++objIndex;
+	return newObj;
+}
+
+
+bri::Sector* Assn1::createSector() {
+	bri::Sector *newSector = (bri::Sector*)malloc(sizeof(bri::Sector));
+	for (int i = 0; i < SECTOR_SIZE * SECTOR_SIZE; ++i) {
+		newSector->blocks[i] = createLandSquare(0, (rand() % 5000) / 1000.0);
+	}
+	return newSector;
+}
+
+
+bri::Sector* Assn1::findSector(int x, int z) {
+	if (x < 0) {
+		x = abs(x);
+		x = x % MAP_SIZE;
+		x = MAP_SIZE - x;
+	}
+	else {
+		x %= MAP_SIZE;
+	}
+
+	if (z < 0) {
+		z = abs(z);
+		z = z % MAP_SIZE;
+		z = MAP_SIZE - z;
+	}
+	else {
+		z %= MAP_SIZE;
+	}
+
+	return map[z * MAP_SIZE + x];
+}
+
 
 HRESULT Assn1::loadMesh(std::string filename) {
 	LPD3DXBUFFER pD3DXMtrlBuffer;
@@ -701,6 +763,40 @@ VOID Assn1::Render2()
 	// Setup the world, view, and projection matrices
 	SetupMatrices();
 
+	// Choose & render land-sectors
+	int bdist = 7;		// How many sectors away to render
+	int x = vEyePt.x / (SECTOR_SIZE * BLOCK_WIDTH);
+	int z = vEyePt.z / (SECTOR_SIZE * BLOCK_WIDTH);
+	for (int u = x - bdist; u < x + bdist; ++u) {
+		for (int v = z - bdist; v < z + bdist; ++v) {
+			bri::Sector *sec = findSector(u, v);
+			D3DXMATRIXA16 matSec;
+			D3DXMatrixTranslation(&matSec, u * SECTOR_SIZE * BLOCK_WIDTH, 0, v * SECTOR_SIZE * BLOCK_WIDTH);
+
+			for (int lands = 0; lands < SECTOR_SIZE * SECTOR_SIZE; ++lands) {
+				double lx = (lands % SECTOR_SIZE) * BLOCK_WIDTH;
+				double ly = 0;
+				double lz = (lands / SECTOR_SIZE) * BLOCK_WIDTH;
+				D3DXMATRIXA16 temp;
+				D3DXMatrixTranslation(&temp, lx, ly, lz);
+				temp = sec->blocks[lands]->matScaling * temp * matSec;
+				g_pDevice->SetTransform(D3DTS_WORLD, &temp);
+				g_pDevice->SetStreamSource(0, VB, 0, sizeof(bri::Vertex));
+				g_pDevice->SetFVF(bri::Vertex::FVF);
+
+				g_pDevice->SetMaterial(&matMirror);
+
+				g_pDevice->SetTexture(0, texGrass2);
+				g_pDevice->DrawPrimitive(D3DPT_TRIANGLELIST, 18, 8);
+
+				g_pDevice->SetTexture(0, texGrass1);
+				g_pDevice->DrawPrimitive(D3DPT_TRIANGLELIST, 42, 2);
+			}
+		}
+	}
+
+
+	/*
 	// Render meshes
 
 	// Note that objIndex is the *number* of objects not the index (sigh)
@@ -740,6 +836,7 @@ VOID Assn1::Render2()
 			g_pDevice->DrawPrimitive(D3DPT_TRIANGLELIST, 42, 2);
 		}
 	}
+	*/
 
 	if (snowOn) {
 		// Draw the physical mirror
@@ -1289,3 +1386,5 @@ IDirect3DTexture9*		Assn1::texEarth2;			// Texture for dirt/earth
 double					Assn1::speed = 1.0;			// Camera speed
 int						Assn1::matProjIndex = 0;			// Which projection matrix to use
 int						Assn1::skipObjs = 0;		// Skip over some objects to speed up framerate
+bri::Sector*			Assn1::map[MAP_SIZE * MAP_SIZE];
+bri::Sector*			Assn1::sectorList[MAX_SECTORS];

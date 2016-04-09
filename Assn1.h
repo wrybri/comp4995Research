@@ -5,6 +5,10 @@
 #endif
 
 #define MAX_OBJECTS 10100
+#define SECTOR_SIZE 8
+#define MAX_SECTORS 100
+#define MAP_SIZE 200
+#define BLOCK_WIDTH 5
 
 
 namespace bri {
@@ -39,6 +43,13 @@ namespace bri {
 		D3DXMATRIX				matNet;			// Net transformation matrix (for non-translations only)
 		bri::BoundingSphere		boundSphere;		// Bounding sphere for object
 		bri::MeshObj			*mesh;		// Mesh object to use
+		int						type;		// Type of object (for land tiles)
+	};
+
+	struct Sector {
+		bri::Obj3d* blocks[SECTOR_SIZE * SECTOR_SIZE];
+		// int x;
+		// int y;
 	};
 
 
@@ -103,9 +114,9 @@ public:
 	int Render();
 	int LoadBitmapToSurface(char* PathName, LPDIRECT3DSURFACE9* ppSurface, LPDIRECT3DDEVICE9 pDevice);
 
-	int InitDirect3DDevice(HWND hWndTarget, int Width, int Height, BOOL bWindowed, D3DFORMAT FullScreenFormat, LPDIRECT3D9 pD3D, LPDIRECT3DDEVICE9* ppDevice);
+	// int InitDirect3DDevice(HWND hWndTarget, int Width, int Height, BOOL bWindowed, D3DFORMAT FullScreenFormat, LPDIRECT3D9 pD3D, LPDIRECT3DDEVICE9* ppDevice);
 	static void SetError(char* szFormat, ...);
-	void Draw(int Pitch, DWORD* pData, int x1, int y1, int x2, int y2);
+	// void Draw(int Pitch, DWORD* pData, int x1, int y1, int x2, int y2);
 
 	// Assignment 2
 	HRESULT InitGeometry();
@@ -124,6 +135,9 @@ public:
 
 	// Research
 	static void createObject(float scaleFactor, bri::MeshObj* meshType, float x, float y, float z);
+	static bri::Obj3d* createLandSquare(int landType, double height);
+	static bri::Sector* createSector();
+	static bri::Sector* findSector(int x, int y);
 
 
 	~Assn1();
@@ -189,4 +203,6 @@ public:
 	static double					speed;					// Camera forward speed
 	static int						matProjIndex;
 	static int						skipObjs;				// Skip over objects to render
+	static bri::Sector*				map[];
+	static bri::Sector*				sectorList[];
 };
