@@ -138,8 +138,9 @@ public:
 	static bri::Obj3d* createLandSquare(int landType, double height);
 	static bri::Sector* createSector();
 	static bri::Sector* findSector(int x, int y);
-	static void pickSectors(boolean secList[], int x0, int y0, int x1, int y1, int x2, int y2);
+	static void pickSectors(int x0, int y0, int x1, int y1, int x2, int y2);
 	static void swap(int *i1, int *i2);
+	static void clearSectorLocation(int x, int z);
 
 
 	~Assn1();
@@ -211,4 +212,11 @@ public:
 	static D3DXVECTOR3				moveDirection;			// Current heading
 	static double					camAngle2d;				// Top-down heading angle
 	static int						camNumber;
+	static int						debug1;				// When breakpoints aren't enough..
+	static int						debug2;				// When breakpoints aren't enough..
+	static int						debug3;				// When breakpoints aren't enough..
+	static double					debug4;				// When breakpoints still aren't enough
+	static double					debug5;				// When breakpoints still aren't enough..
+	static double					debug6;				// When breakpoints still aren't enough..
+	static int						rdDelta;
 };
