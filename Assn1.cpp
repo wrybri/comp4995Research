@@ -7,6 +7,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <DirectXMath.h>
 // #define _USE_MATH_DEFINES
 
 
@@ -158,6 +159,9 @@ long CALLBACK Assn1::WndProc(HWND hWnd, UINT uMessage, WPARAM wParam, LPARAM lPa
 			break;
 		case VK_TAB:	// Tab = cycle projection matrixes
 			matProjIndex = (matProjIndex + 1) % 5;
+			break;
+		case VK_RETURN: // Cycle cameras
+			camNumber = (camNumber + 1) % 3;
 			break;
 		}
 
@@ -655,6 +659,7 @@ HRESULT Assn1::loadMesh(std::string filename) {
 
 // Old render method from assignment 1 (still used - it calls Render2() for mesh stuff after it begins the scene)
 int Assn1::Render() {
+	int exitCode = 0;
 	HRESULT r;
 	// LPDIRECT3DSURFACE9 pBackSurf = 0;
 	if (!g_pDevice) {
@@ -675,7 +680,7 @@ int Assn1::Render() {
 	g_pDevice->BeginScene();
 
 	// Draw all meshes & geometry
-	Render2();
+	exitCode = Render2();
 
 	// Draw framerate count
 	ID3DXFont *g_font = NULL;
@@ -719,7 +724,7 @@ int Assn1::Render() {
 	}
 
 	char fpsfps[10];
-	sprintf_s(fpsfps, "%d", frameRate);
+	sprintf_s(fpsfps, "%d %d", frameRate, exitCode);
 	int g_width = 200;
 	int g_height = 75;
 	SetRect(&font_rect, 0, 0, g_width, g_height);
@@ -746,8 +751,9 @@ int Assn1::Render() {
 
 
 // Render2() - Now with 100% more meshy goodness (this is the new render code for assignment 2, called from Render()
-VOID Assn1::Render2()
+int Assn1::Render2()
 {
+	int exitCode = 0;
 	// Clear the backbuffer and the zbuffer (minus bb  -BL)
 	// g_pDevice->Clear(0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER,
 	g_pDevice->Clear(0, NULL, D3DCLEAR_ZBUFFER,
@@ -764,12 +770,36 @@ VOID Assn1::Render2()
 	SetupMatrices();
 
 	// Choose & render land-sectors
-	int bdist = 7;		// How many sectors away to render
+	// Calculate current angle (top-down) of view
+	D3DXVECTOR3 vCam = moveDirection;
+	vCam.y = 0;
+	D3DXVECTOR3 vInitial(0, 0, -1);
+	// DirectX::XMVector3AngleBetweenVectors((DirectX::XMVECTOR)vCam, (DirectX::XMVECTOR)vInitial);
+
+	// I swear to god there is no "angle between two vectors" method in DirectX 9
+	// double camAngle2d = acos(D3DXVec3Dot(&vCam, &vInitial) / (sqrt(pow(vCam.x, 2) + pow(vCam.z, 2)) * sqrt(pow(vInitial.x, 2) + pow(vInitial.z, 2))));
+	camAngle2d = camAngle;
+	exitCode = (camAngle2d / (D3DX_PI * 2)) * 360;
+	D3DXMATRIX matTerrain;
+	D3DXMatrixRotationY(&matTerrain, camAngle2d);
+
+
+	int bdist = 10;		// How many sectors away to render
+	int bwidth = 4;
 	int x = vEyePt.x / (SECTOR_SIZE * BLOCK_WIDTH);
 	int z = vEyePt.z / (SECTOR_SIZE * BLOCK_WIDTH);
-	for (int u = x - bdist; u < x + bdist; ++u) {
-		for (int v = z - bdist; v < z + bdist; ++v) {
-			bri::Sector *sec = findSector(u, v);
+	D3DXMATRIX matTerrainTrans, matTerrainTransBack;
+	D3DXMatrixTranslation(&matTerrainTrans, -x, 0, -z);
+	D3DXMatrixTranslation(&matTerrainTransBack, x, 0, z);
+	matTerrain = matTerrainTrans * matTerrain * matTerrainTransBack;
+	for (int xx = x - bwidth; xx < x + bwidth; ++xx) {
+		for (int zz = z ; zz < z + bdist; ++zz) {
+			D3DXVECTOR3 secVec(xx, 0, zz);
+			D3DXVec3TransformCoord(&secVec, &secVec, &matTerrain);
+			int u = round(secVec.x);
+			int v = round(secVec.z);
+
+			bri::Sector *sec = findSector(v, u);
 			D3DXMATRIXA16 matSec;
 			D3DXMatrixTranslation(&matSec, u * SECTOR_SIZE * BLOCK_WIDTH, 0, v * SECTOR_SIZE * BLOCK_WIDTH);
 
@@ -838,6 +868,7 @@ VOID Assn1::Render2()
 	}
 	*/
 
+	/*
 	if (snowOn) {
 		// Draw the physical mirror
 		D3DXMATRIX I;
@@ -846,18 +877,6 @@ VOID Assn1::Render2()
 
 		g_pDevice->SetStreamSource(0, VB, 0, sizeof(bri::Vertex));
 		g_pDevice->SetFVF(bri::Vertex::FVF);
-
-		/*
-		// draw the floor
-		g_pDevice->SetMaterial(&FloorMtrl);
-		g_pDevice->SetTexture(0, FloorTex);
-		g_pDevice->DrawPrimitive(D3DPT_TRIANGLELIST, 0, 2);
-
-		// draw the walls
-		g_pDevice->SetMaterial(&WallMtrl);
-		g_pDevice->SetTexture(0, WallTex);
-		g_pDevice->DrawPrimitive(D3DPT_TRIANGLELIST, 6, 4);
-		*/
 
 		// draw the mirror
 		g_pDevice->SetTransform(D3DTS_WORLD, &matrixMirror);
@@ -873,6 +892,7 @@ VOID Assn1::Render2()
 
 		RenderMirror();
 	}
+	*/
 
 	/*
 	if (snowOn) {
@@ -880,6 +900,8 @@ VOID Assn1::Render2()
 		snowSystem->render();
 	}
 	*/
+
+	return exitCode;
 }
 
 
@@ -1111,6 +1133,59 @@ VOID Assn1::rotateCamera(boolean clockwise) {
 }
 
 
+VOID Assn1::pickSectors(boolean secList[], int x0, int y0, int x1, int y1, int x2, int y2)
+{
+	// int[] pixels = bitmap.Pixels;
+	int width = MAP_SIZE;
+	int height = MAP_SIZE;
+	// sort the points vertically
+	if (y1 > y2)
+	{
+		swap(&x1, &x2);
+		swap(&y1, &y2);
+	}
+	if (y0 > y1)
+	{
+		swap(&x0, &x1);
+		swap(&y0, &y1);
+	}
+	if (y1 > y2)
+	{
+		swap(&x1, &x2);
+		swap(&y1, &y2);
+	}
+
+	double dx_far = (x2 - x0) / (double)(y2 - y0 + 1);
+	double dx_upper = (x1 - x0) / (double)(y1 - y0 + 1);
+	double dx_low = (x2 - x1) / (double)(y2 - y1 + 1);
+	double xf = x0;
+	double xt = x0 + dx_upper; // if y0 == y1, special case
+	for (int y = y0; y <= (y2 > height - 1 ? height - 1 : y2); y++)
+	{
+		if (y >= 0)
+		{
+			for (int x = (xf > 0 ? xf : 0); x <= (xt < width ? xt : width - 1); x++)
+				secList[x + y * width] = TRUE;
+			for (int x = (xf < width ? xf : width - 1); x >= (xt > 0 ? xt : 0); x--)
+				secList[x + y * width] = TRUE;
+		}
+		xf += dx_far;
+		if (y < y1)
+			xt += dx_upper;
+		else
+			xt += dx_low;
+	}
+}
+
+
+void Assn1::swap(int *i1, int *i2) {
+	int temp = *i1;
+	*i1 = *i2;
+	*i2 = temp;
+}
+
+
+
 //-----------------------------------------------------------------------------
 // Name: SetupMatrices()
 // Desc: Sets up the world, view, and projection transform matrices.
@@ -1143,7 +1218,7 @@ VOID Assn1::SetupMatrices()
 
 	// Translate camera position vector
 	D3DXVECTOR3 direction(0.0f, 0.0f, 0.1f);
-	D3DXVECTOR3 moveDirection;
+	// D3DXVECTOR3 moveDirection;						// Made global
 	D3DXVECTOR3 vUpVec(0.0f, 1.0f, 0.0f);
 	direction *= speed;
 	// D3DXVec3TransformCoord(&vEyePt, &vEyePt, &matCamera);
@@ -1152,13 +1227,28 @@ VOID Assn1::SetupMatrices()
 	D3DXVec3TransformCoord(&moveDirection, &direction, &matCamera2);
 	D3DXVec3TransformCoord(&direction, &direction, &matBomb);
 	D3DXVec3TransformCoord(&direction, &direction, &matCamera2);
-	// D3DXVECTOR3 bombSight(0.0f, -0.05f, 0.0f);						// Makes the camera look slighty lower than current heading (better visuals)
-	D3DXVECTOR3 vLookatPt = vEyePt + direction; //  +bombSight;
+
+	// Set camera angle
+	D3DXVECTOR3 vLookatPt;
+	switch (camNumber) {
+	case 0:
+		vLookatPt = vEyePt + direction;
+		break;
+	case 1:
+		vLookatPt = vEyePt - direction - D3DXVECTOR3(0, 2, 0);
+		break;
+	case 2:
+		vLookatPt = vEyePt - D3DXVECTOR3(0, 1, 0);
+		// vUpVec = D3DXVECTOR3(0, 0, 1);
+		vUpVec = -1 * moveDirection;
+		break;
+	}
 	
 	D3DXMatrixLookAtLH(&matView, &vEyePt, &vLookatPt, &vUpVec);
 
 	g_pDevice->SetTransform(D3DTS_VIEW, &matView);
 	vEyePt += moveDirection;
+
 
 	// For the projection matrix, we set up a perspective transform (which
 	// transforms geometry from 3D view space to 2D viewport space, with
@@ -1388,3 +1478,7 @@ int						Assn1::matProjIndex = 0;			// Which projection matrix to use
 int						Assn1::skipObjs = 0;		// Skip over some objects to speed up framerate
 bri::Sector*			Assn1::map[MAP_SIZE * MAP_SIZE];
 bri::Sector*			Assn1::sectorList[MAX_SECTORS];
+boolean					Assn1::mapSectors[MAP_SIZE * MAP_SIZE];
+D3DXVECTOR3				Assn1::moveDirection;		// Current heading
+double					Assn1::camAngle2d = 0;				// Top-down heading angle
+int						Assn1::camNumber = 0;		// Camera to use

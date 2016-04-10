@@ -122,7 +122,7 @@ public:
 	HRESULT InitGeometry();
 	VOID Cleanup();
 	VOID SetupMatrices();
-	VOID Render2();
+	int Render2();
 	VOID rotateCamera(boolean clockwise);
 
 	// Assignment3
@@ -138,6 +138,8 @@ public:
 	static bri::Obj3d* createLandSquare(int landType, double height);
 	static bri::Sector* createSector();
 	static bri::Sector* findSector(int x, int y);
+	static void pickSectors(boolean secList[], int x0, int y0, int x1, int y1, int x2, int y2);
+	static void swap(int *i1, int *i2);
 
 
 	~Assn1();
@@ -205,4 +207,8 @@ public:
 	static int						skipObjs;				// Skip over objects to render
 	static bri::Sector*				map[];
 	static bri::Sector*				sectorList[];
+	static BOOLEAN					mapSectors[];
+	static D3DXVECTOR3				moveDirection;			// Current heading
+	static double					camAngle2d;				// Top-down heading angle
+	static int						camNumber;
 };
