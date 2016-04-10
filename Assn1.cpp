@@ -329,7 +329,7 @@ int Assn1::GameShutdown() {
 HRESULT Assn1::InitGeometry()
 {
 	// Set initial camera position
-	vEyePt = D3DXVECTOR3(0.0f, 80.0f, -300.0f);
+	vEyePt = D3DXVECTOR3(0.0f, 110.0f, 0.0f);
 
 	// Load meshes
 	loadMesh("chair.x");
@@ -750,7 +750,7 @@ int Assn1::Render() {
 	}
 
 	char fpsfps[80];
-	sprintf_s(fpsfps, "%dfps %dsec %dsmax %dx %dz %4.2f %4.2faltitude %4.2fspeed", frameRate, exitCode, debug1, debug2, debug3, debug4, debug5, debug6);
+	sprintf_s(fpsfps, "%dfps %dsec %dsmax %dx %dz +%ddistance %4.2faltitude %4.2fspeed", frameRate, exitCode, debug1, debug2, debug3, rdDelta, debug5, debug6);
 	int g_width = 600;
 	int g_height = 75;
 	SetRect(&font_rect, 0, 0, g_width, g_height);
@@ -815,21 +815,23 @@ int Assn1::Render2()
 	debug2 = x;
 	debug3 = z;
 
-	D3DXVECTOR3 p2(x - renderDistance, 0, z + renderDistance);
-	D3DXVECTOR3 p3(x + renderDistance, 0, z + renderDistance);
+	D3DXVECTOR3 p1(x, 0, z -2);										// Point 1 block behind camera
+	D3DXVECTOR3 p2(x - renderDistance/1.8, 0, z + renderDistance);
+	D3DXVECTOR3 p3(x + renderDistance/1.8, 0, z + renderDistance);
 
 	D3DXMATRIX matTerrainTrans, matTerrainTransBack;
 	D3DXMatrixTranslation(&matTerrainTrans, -x, 0, -z);
 	D3DXMatrixTranslation(&matTerrainTransBack, x, 0, z);
 	matTerrain = matTerrainTrans * matTerrain * matTerrainTransBack;
 
-	// Translate the two field-of-view terminator vector thingies (or whatever they should be called)
+	// Translate the three points that define the corners of the field-of-view triangle we want
+	D3DXVec3TransformCoord(&p1, &p1, &matTerrain);
 	D3DXVec3TransformCoord(&p2, &p2, &matTerrain);
 	D3DXVec3TransformCoord(&p3, &p3, &matTerrain);
-	int minX = min(x, min(round(p2.x), round(p3.x)));
-	int maxX = max(x, max(round(p2.x), round(p3.x)));
-	int minZ = min(z, min(round(p2.z), round(p3.z)));
-	int maxZ = max(z, max(round(p2.z), round(p3.z)));
+	int minX = min(round(p1.x), min(round(p2.x), round(p3.x)));
+	int maxX = max(round(p1.x), max(round(p2.x), round(p3.x)));
+	int minZ = min(round(p1.z), min(round(p2.z), round(p3.z)));
+	int maxZ = max(round(p1.z), max(round(p2.z), round(p3.z)));
 
 	// Debug
 	debug1 = (maxX - minX + 1) * (maxZ - minZ + 1);
@@ -845,29 +847,15 @@ int Assn1::Render2()
 			mapSectors[j * MAP_SIZE + i] = FALSE;
 		}
 	}
-	
 
-	/*
-	// Zero-out portion of sector-picking array that we'll need
-	for (int i = 0; i < MAP_SIZE ; ++i) {
-		for (int j = 0; j < MAP_SIZE; ++j) {
-			// mapSectors[(i * MAP_SIZE + j) % (MAP_SIZE * MAP_SIZE)] = false;
-			// clearSectorLocation(j, i);
-			// clearSectorLocation(i, j);
-			mapSectors[j * MAP_SIZE + i];
-		}
-	}
-	*/
 
 	// pickSectors(x, z, round(p2.x), round(p2.z), round(p3.x), round(p3.z));
 	// pickSectors(z, x, round(p2.z), round(p2.x), round(p3.z), round(p3.x) );  // x/z flipped
-	pickSectors(x - minX, z - minZ, round(p2.x) - minX, round(p2.z) - minZ, round(p3.x) - minX, round(p3.z) - minZ);		// Third time's the charm!
+	pickSectors(round(p1.x) - minX, round(p1.z) - minZ, round(p2.x) - minX, round(p2.z) - minZ, round(p3.x) - minX, round(p3.z) - minZ);		// Third time's the charm!
 
 
 	for (int xx = minX; xx <= maxX ; ++xx) {
 		for (int zz = minZ ; zz <= maxZ; ++zz) {
-			// if (mapSectors[xx * MAP_SIZE + zz]) {
-			// if (mapSectors[zz * MAP_SIZE + xx]) {
 			if (mapSectors[(zz - minZ) * MAP_SIZE + xx - minX]) {
 
 				exitCode++;
@@ -877,10 +865,10 @@ int Assn1::Render2()
 				int v = round(secVec.z);
 
 				// Find sector by its map coordinates, then translate it to its world coordinates and render it
-				// bri::Sector *sec = findSector(v, u);
 				bri::Sector *sec = findSector(u, v);
 				D3DXMATRIXA16 matSec;
-				D3DXMatrixTranslation(&matSec, u * SECTOR_SIZE * BLOCK_WIDTH, 0, v * SECTOR_SIZE * BLOCK_WIDTH);
+				// -3.5 * BLOCK_WIDTH and 2 * BLOCK_WIDTH are fine-tuning adjustments to get the camera right over the center of the bottommost sector
+				D3DXMatrixTranslation(&matSec, u * SECTOR_SIZE * BLOCK_WIDTH - 3.5 * BLOCK_WIDTH, 0, v * SECTOR_SIZE * BLOCK_WIDTH);
 
 				for (int lands = 0; lands < SECTOR_SIZE * SECTOR_SIZE; ++lands) {
 					double lx = (lands % SECTOR_SIZE) * BLOCK_WIDTH;
@@ -1323,7 +1311,7 @@ VOID Assn1::SetupMatrices()
 		vFinalCam = D3DXVECTOR3(vEyePt.x, 1200, vEyePt.z);
 		D3DXVECTOR3 tempMov;
 		D3DXVec3Normalize(&tempMov, &moveDirection);
-		tempMov *= rdDelta * SECTOR_SIZE * BLOCK_WIDTH / 2;
+		tempMov *= (rdDelta + 8) * SECTOR_SIZE * BLOCK_WIDTH / 2;
 		vFinalCam += tempMov;
 		vLookatPt = vFinalCam - D3DXVECTOR3(0, 1, 0);
 		break;
